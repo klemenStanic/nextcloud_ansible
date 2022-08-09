@@ -1,0 +1,8 @@
+[all:vars]
+ansible_user=ubuntu
+mysql_root_password=mypassword
+nextcloud_db_password=mypassword
+
+[nextcloud_servers]
+192.168.64.6
+

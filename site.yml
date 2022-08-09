@@ -1,0 +1,233 @@
+- hosts: all
+  become: true
+  pre_tasks:
+    - name: update (Ubuntu)
+      apt:
+        upgrade: dist
+        update_cache: yes
+      when: ansible_distribution == "Ubuntu"
+
+- hosts: nextcloud_servers
+  become: true
+
+  tasks:
+    - name: create nextcloud user
+      user:
+        name: nextcloud
+        groups: root
+        shell: /bin/bash
+        create_home: yes
+
+    - name: add ssh key for nextcloud user
+      authorized_key:
+        user: nextcloud
+        key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH4WZuw5w4DPGm/0zj1VWG2prAJbwh4Z50gwEPJasOhk ansible"
+
+    - name: add sudoers file for nextcloud user
+      copy:
+        src: sudoer_nextcloud
+        dest: /etc/sudoers.d/nextcloud
+        owner: root
+        group: root
+        mode: 0440
+
+    - name: set a hostname
+      ansible.builtin.hostname:
+        name: personalnextcloud
+
+    - name: install the necessary packages
+      apt:
+        name:
+          - unzip
+          - php
+          - php-apcu
+          - php-bcmath
+          - php-cli
+          - php-common
+          - php-curl
+          - php-gd
+          - php-gmp
+          - php-imagick
+          - php-intl
+          - php-mbstring
+          - php-mysql
+          - php-zip
+          - php-xml
+          - mariadb-server
+        state: latest
+
+    - name: Adds Python MySQL support on Debian/Ubuntu
+      apt:
+        pkg: python3-mysqldb
+        state: present
+      when: ansible_os_family == 'Debian'
+
+    # Set up mariadb, similar to what the mysql_secure_installation script does
+    - name: Sets the root password
+      mysql_user:
+        user: root
+        password: "{{ mysql_root_password }}"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        host: localhost
+
+    - name: Deletes anonymous MySQL server user for ansible_fqdn
+      mysql_user:
+        user: ""
+        host: "{{ ansible_fqdn }}"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        state: "absent"
+
+    - name: Deletes anonymous MySQL server user for localhost
+      mysql_user:
+        user: ""
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        state: "absent"
+
+    - name: Secures the MySQL root user for IPV6 localhost (::1)
+      mysql_user:
+        user: "root"
+        password: "{{ mysql_root_password }}"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        host: "::1"
+      no_log: yes
+
+    - name: Secures the MySQL root user for IPV4 localhost (127.0.0.1)
+      mysql_user:
+        user: "root"
+        password: "{{ mysql_root_password }}"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        host: "127.0.0.1"
+      no_log: yes
+
+    - name: Secures the MySQL root user for localhost domain (localhost)
+      mysql_user:
+        user: "root"
+        password: "{{ mysql_root_password }}"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        host: "localhost"
+      no_log: yes
+
+    - name: Secures the MySQL root user for server_hostname domain
+      mysql_user:
+        user: "root"
+        password: "{{ mysql_root_password }}"
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+        host: "{{ ansible_fqdn }}"
+      no_log: yes
+
+    - name: Removes the MySQL test database
+      mysql_db:
+        db: test
+        state: absent
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    # Create the database for nextcloud
+    - name: Create database for nextcloud
+      mysql_db:
+        name: nextcloud
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: Set mysql user privileges
+      mysql_user:
+        name: nextcloud
+        password: "{{ nextcloud_db_password }}"
+        host: localhost
+        priv: "nextcloud.*:ALL"
+        state: present
+        update_password: on_create
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    # Enable php extenisions
+    - name: enable php modules
+      shell: phpenmod bcmath gmp imagick intl dir env headers mime rewrite ssl
+      args:
+        creates: /etc/php5/cli/conf.d/20-mcrypt.ini
+      notify:
+        - restart apache2
+
+    - name: download and unzip nextcloud
+      unarchive:
+        src: https://download.nextcloud.com/server/releases/latest-24.zip
+        dest: /var/www
+        remote_src: yes
+        mode: 0755
+        owner: www-data
+        group: www-data
+        creates: /var/www/nextcloud
+
+    - name: Add Apache virtual host for Nextcloud
+      copy:
+        src: personalnextcloud.conf
+        dest: /etc/apache2/sites-available/personalnextcloud.conf
+        owner: root
+        group: root
+        mode: 0644
+
+    - name: Enable nextcloud site
+      command: a2ensite personalnextcloud
+      notify:
+        - restart apache2
+
+    - name: Disable default nextcloud site
+      command: a2dissite 000-default.conf
+      notify:
+        - restart apache2
+
+    - name: Configure PHP
+      lineinfile:
+        path: /etc/php/7.4/apache2/php.ini
+        regexp: "{{item.From}}"
+        line: "{{item.To}}"
+        state: present
+      with_items:
+        - { From: "memory_limit = 128M", To: "memory_limit = 512M" }
+        - {
+            From: "upload_max_filesize = 2M",
+            To: "upload_max_filesize = 1000M",
+          }
+        - { From: "max_execution_time = 360", To: "max_execution_time = 360" }
+        - { From: "max_execution_time = 360", To: "max_execution_time = 360" }
+        - { From: "post_max_size = 8M", To: "post_max_size = 1000M" }
+        - { From: ";date.timezone =", To: "date.timezone = Europe/Ljubljana" }
+        - { From: ";opcache.enable=1", To: "opcache.enable = 1" }
+        - {
+            From: ";opcache.interned_strings_buffer=8",
+            To: "opcache.interned_strings_buffer=8",
+          }
+        - {
+            From: ";opcache.max_accelerated_files=10000",
+            To: " opcache.max_accelerated_files=10000",
+          }
+        - {
+            From: ";opcache.memory_consumption=128",
+            To: "opcache.memory_consumption=128",
+          }
+        - { From: ";opcache.save_comments=1", To: "opcache.save_comments=1" }
+        - {
+            From: ";opcache.revalidate_freq=2",
+            To: ";opcache.revalidate_freq=1",
+          }
+
+    # # Enable memory caching
+    # - name: Enable memory caching in nextcloud's config file
+    #   copy:
+    #     src: nextcloud_config.php
+    #     dest: /var/www/nextcloud/config/config.php
+    #     owner: root
+    #     group: www-data
+    #     mode: 0660
+
+  handlers:
+    - name: restart apache2
+      service: name=apache2 state=restarted
