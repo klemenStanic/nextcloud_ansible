@@ -76,7 +76,7 @@
         user: root
         password: "{{ mysql_root_password }}"
         host: localhost
-      when: root_pwd_check != 0
+      when: root_pwd_check.rc != 0
 
     - name: Deletes anonymous MySQL server user for ansible_fqdn
       mysql_user:
