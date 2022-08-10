@@ -1,14 +1,14 @@
-- hosts: all
+---
+- hosts: localhost
+  connection: local
   become: true
+
   pre_tasks:
     - name: update (Ubuntu)
       apt:
         upgrade: dist
         update_cache: yes
       when: ansible_distribution == "Ubuntu"
-
-- hosts: nextcloud_servers
-  become: true
 
   tasks:
     - name: create nextcloud user
@@ -21,11 +21,11 @@
     - name: add ssh key for nextcloud user
       authorized_key:
         user: nextcloud
-        key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH4WZuw5w4DPGm/0zj1VWG2prAJbwh4Z50gwEPJasOhk ansible"
+        key: "{{ nextcloud_ssh_key }}"
 
     - name: add sudoers file for nextcloud user
       copy:
-        src: sudoer_nextcloud
+        src: files/sudoer_nextcloud
         dest: /etc/sudoers.d/nextcloud
         owner: root
         group: root
@@ -54,13 +54,8 @@
           - php-zip
           - php-xml
           - mariadb-server
+          - python3-mysqldb
         state: latest
-
-    - name: Adds Python MySQL support on Debian/Ubuntu
-      apt:
-        pkg: python3-mysqldb
-        state: present
-      when: ansible_os_family == 'Debian'
 
     # Set up mariadb, similar to what the mysql_secure_installation script does
     - name: Sets the root password
@@ -168,7 +163,7 @@
 
     - name: Add Apache virtual host for Nextcloud
       copy:
-        src: personalnextcloud.conf
+        src: files/personalnextcloud.conf
         dest: /etc/apache2/sites-available/personalnextcloud.conf
         owner: root
         group: root
@@ -218,16 +213,3 @@
             From: ";opcache.revalidate_freq=2",
             To: ";opcache.revalidate_freq=1",
           }
-
-    # # Enable memory caching
-    # - name: Enable memory caching in nextcloud's config file
-    #   copy:
-    #     src: nextcloud_config.php
-    #     dest: /var/www/nextcloud/config/config.php
-    #     owner: root
-    #     group: www-data
-    #     mode: 0660
-
-  handlers:
-    - name: restart apache2
-      service: name=apache2 state=restarted

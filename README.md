@@ -1,32 +1,29 @@
-# Deploy a nextcloud server using ansible
+# Nexcloud instantiation using Ansible Pull
+This repository contains the Ansible configuration, used to deploy  
+a Nextcloud instance on a Ubuntu machine.
 
-It includes an ansible playbook, that deploys a nextcloud application alongside apache2 http server
-to a Ubuntu server.
+## Disclaimer
+This is a personal repository, don't use it without checking what the  
+actual configuration does.
 
-Note that this is a personal repository, and many things could be improved.
+## Prerequisites
+- You need to install `ansible`.
+- This ansible configuration is configured to run on an Ubuntu distribution.
 
-## How to use
-You need to have ansible installed on your local machine.  
-First, create an ssh key:
+# Running
+First, you need to create a local `inventory` file, that contains the 
+necessary variables. Here you can specify your own `mysql_root_password`,  
+nextcloud database password and a public ssh key, for the nextcloud user:  
 ```
-ssh-keygen -t ed25519 -C "ansible"
-``` 
-Then, copy the public key to the server, where you want to install the nextcloud instance:
+[all:vars]
+mysql_root_password=mypassword
+nextcloud_db_password=mypassword
+nextcloud_ssh_key="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH4WZuw5w4DPGm/0zj1VWG2prAJbwh4Z50gwEPJasOhk ansible"
 ```
-ssh-copy-id -i .ssh/ansible.pub <username>@<server_ip>
+
+To install nextcloud, simply run this command on the server, where you  
+wish to install the nexcloud instance:
 ```
-Then, in the `inventory` file, change the `ansible_user` field to the user on the server.  
-You should also change the `mysql_root_password` and the `nextcloud_db_password` to a more secure one. 
-Change the server's ip in the `nextcloud_servers` section.
-
-In the `ansible.cfg` file, change the `remote_user` field to the username on the server.
-Finally, run:
-ansible-playbook --ask-become-pass site.yml
-
-This will set everything up and you can access your nextcloud server at the IP address of the server.
-
-To create an SSL certificate, run on the server:
-```bash
-sudo add-apt-repository ppa:certbot/certbot
-sudo certbot --apache -d <domain> 
+sudo ansible-pull https://github.com/klemenStanic/nextcloud_ansible.git -i inventory
 ```
+
