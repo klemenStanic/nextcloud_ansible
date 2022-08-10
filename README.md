@@ -7,7 +7,13 @@ This is a personal repository, don't use it without checking what the
 actual configuration does.
 
 ## Prerequisites
-- You need to install `ansible`.
+- You need to install [ansible](https://www.ansible.com/). You can achieve this by running these commands:
+  ```
+  sudo apt update
+  sudo apt install software-properties-common
+  sudo apt-add-repository --yes --update ppa:ansible/ansible
+  sudo apt install ansible
+  ```
 - This ansible configuration is configured to run on an Ubuntu distribution.
 
 # Running
@@ -24,6 +30,6 @@ nextcloud_ssh_key="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH4WZuw5w4DPGm/0zj1VWG2pr
 To install nextcloud, simply run this command on the server, where you  
 wish to install the nexcloud instance:
 ```
-sudo ansible-pull https://github.com/klemenStanic/nextcloud_ansible.git -i inventory
+sudo ansible-pull -U https://github.com/klemenStanic/nextcloud_ansible.git -i inventory
 ```
 
