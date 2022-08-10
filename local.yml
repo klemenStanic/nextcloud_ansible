@@ -213,3 +213,7 @@
             From: ";opcache.revalidate_freq=2",
             To: ";opcache.revalidate_freq=1",
           }
+
+  handlers:
+    - name: restart apache2
+      service: name=apache2 state=restarted
