@@ -58,6 +58,17 @@
         state: latest
 
     # Set up mariadb, similar to what the mysql_secure_installation script does
+    - name: Check if root password is unset
+      shell: >
+        mysql -u root
+        -p'{{ mysql_root_password }}'
+        -h localhost
+        -S {{ mariadb_socket }}
+        -e "quit"
+      changed_when: false
+      ignore_errors: true
+      register: root_pwd_check
+
     - name: Sets the root password
       mysql_user:
         login_host: "localhost"
@@ -66,6 +77,7 @@
         user: root
         password: "{{ mysql_root_password }}"
         host: localhost
+      when: root_pwd_check != 0
 
     - name: Deletes anonymous MySQL server user for ansible_fqdn
       mysql_user:
