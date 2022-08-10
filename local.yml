@@ -230,7 +230,7 @@
       tags: enable_memory_caching
       lineinfile:
         path: /var/www/nextcloud/config/config.php
-        line: """'memcache.local' => '\OC\Memcache\APCu',"""
+        line: "'memcache.local' => '\\OC\Memcache\APCu',"
         insertbefore: ");"
         state: present
       notify:
