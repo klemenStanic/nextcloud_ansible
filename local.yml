@@ -63,7 +63,6 @@
         mysql -u root
         -p'{{ mysql_root_password }}'
         -h localhost
-        -S {{ mariadb_socket }}
         -e "quit"
       changed_when: false
       ignore_errors: true
