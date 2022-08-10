@@ -226,6 +226,25 @@
             To: ";opcache.revalidate_freq=1",
           }
 
+    - name: Enable nextcloud memory caching
+      tags: enable_memory_caching
+      lineinfile:
+        path: /var/www/nextcloud/config/config.php
+        line: "'memcache.local' => '\OC\Memcache\APCu',"
+        insertbefore: ");"
+        state: present
+      notify:
+        - restart apache2
+
+    - name: Enable cli in php.ini
+      tags: enable_memory_caching
+      lineinfile:
+        path: /etc/php/7.4/apache2/php.ini
+        line: apc.enable_cli = 1
+        state: present
+      notify:
+        - restart apache2
+
   handlers:
     - name: restart apache2
       service: name=apache2 state=restarted
