@@ -60,6 +60,9 @@
     # Set up mariadb, similar to what the mysql_secure_installation script does
     - name: Sets the root password
       mysql_user:
+        login_host: "localhost"
+        login_user: "root"
+        login_password: ""
         user: root
         password: "{{ mysql_root_password }}"
         host: localhost
