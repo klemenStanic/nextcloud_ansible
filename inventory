@@ -1,4 +1,1 @@
-[all:vars]
-mysql_root_password=mypassword
-nextcloud_db_password=mypassword
-nextcloud_ssh_key="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH4WZuw5w4DPGm/0zj1VWG2prAJbwh4Z50gwEPJasOhk ansible"
+localhost mysql_root_password=mypassword nextcloud_db_password=mypassword nextcloud_ssh_key="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIH4WZuw5w4DPGm/0zj1VWG2prAJbwh4Z50gwEPJasOhk ansible"
